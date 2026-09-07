@@ -5,6 +5,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 KNOWLEDGE_BASE_PATH = Path(__file__).resolve().parent.parent / "knowledge_base"
 
+# Minimum similarity required to consider a KB article relevant.
+# This prevents unrelated articles from being returned.
+MIN_RELEVANCE_SCORE = 0.05
+
 
 def load_knowledge_base():
     documents = []
@@ -42,11 +46,15 @@ def retrieve_relevant_content(query: str, top_k: int = 3):
     results = []
 
     for index in ranked_indexes:
-        if similarities[index] > 0:
+
+        score = float(similarities[index])
+
+        # Ignore weak/unrelated matches
+        if score >= MIN_RELEVANCE_SCORE:
             results.append({
                 "filename": documents[index]["filename"],
                 "content": documents[index]["content"],
-                "score": round(float(similarities[index]), 3)
+                "score": round(score, 3)
             })
 
     return results
