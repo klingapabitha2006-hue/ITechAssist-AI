@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from datetime import datetime
 
 from backend.agent_sdk import helpdesk_agent
-from backend.database import get_db_connection
 from agents import Runner
 
 
@@ -14,9 +14,9 @@ app = FastAPI(
 )
 
 
-# =========================================================
+# ============================================================
 # CORS
-# =========================================================
+# ============================================================
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,13 +27,28 @@ app.add_middleware(
 )
 
 
-# =========================================================
+# ============================================================
+# TEMPORARY TICKET STORAGE
+# ============================================================
+# Render free deployment cannot directly access the local
+# XAMPP MySQL database on your laptop.
+#
+# Therefore, tickets created through the live website are
+# stored here while the Render service is running.
+#
+# AI Agent / RAG / Tools are NOT affected.
+# ============================================================
+
+tickets_store = []
+next_ticket_id = 1
+
+
+# ============================================================
 # HOME
-# =========================================================
+# ============================================================
 
 @app.get("/")
 def home():
-
     return {
         "service": "ITechAssist AI",
         "status": "running",
@@ -46,13 +61,12 @@ def home():
     }
 
 
-# =========================================================
+# ============================================================
 # HEALTH CHECK
-# =========================================================
+# ============================================================
 
 @app.get("/api/health")
 def health():
-
     return {
         "status": "healthy",
         "agent": "ITechAssist AI",
@@ -60,18 +74,17 @@ def health():
     }
 
 
-# =========================================================
+# ============================================================
 # HELP REQUEST
-# =========================================================
+# ============================================================
 
 class HelpRequest(BaseModel):
-
     problem: str
 
 
-# =========================================================
-# PARSE AGENT RESPONSE
-# =========================================================
+# ============================================================
+# AGENT RESPONSE PARSER
+# ============================================================
 
 def parse_agent_response(text):
 
@@ -88,206 +101,149 @@ def parse_agent_response(text):
         "source": ""
     }
 
-
     current_section = None
 
-
     lines = text.splitlines()
-
 
     for line in lines:
 
         clean = line.strip()
 
-
         if not clean:
             continue
 
-
         upper = clean.upper()
 
-
-        # -------------------------------------------------
-        # SECTION HEADERS
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # Section detection
+        # ----------------------------------------------------
 
         if upper == "LIKELY ISSUE:":
-
             current_section = "diagnosis"
             continue
 
-
         if upper == "DETECTED INTENT:":
-
             current_section = "intent"
             continue
 
-
         if upper == "AI AGENT ANALYSIS:":
-
             current_section = "ai_response"
             continue
 
-
         if upper == "POSSIBLE CAUSES:":
-
             current_section = "possible_causes"
             continue
 
-
         if upper == "RECOMMENDED TROUBLESHOOTING:":
-
             current_section = "steps"
             continue
 
-
         if upper == "RESOLUTION:":
-
             current_section = "resolution"
             continue
 
-
         if upper == "DIAGNOSTIC FINDING:":
-
             current_section = "tool_interpretation"
             continue
 
-
         if upper == "ESCALATION:":
-
             current_section = "escalation"
             continue
 
-
         if upper == "ESCALATION GUIDANCE:":
-
             current_section = "escalation_guidance"
             continue
 
-
         if upper == "SOURCE:":
-
             current_section = "source"
             continue
 
-
-        # -------------------------------------------------
-        # CONTENT
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # Possible causes
+        # ----------------------------------------------------
 
         if current_section == "possible_causes":
 
             if clean.startswith("-"):
-
                 sections["possible_causes"].append(
                     clean[1:].strip()
                 )
-
             else:
-
-                sections["possible_causes"].append(
-                    clean
-                )
+                sections["possible_causes"].append(clean)
 
             continue
 
+        # ----------------------------------------------------
+        # Troubleshooting steps
+        # ----------------------------------------------------
 
         if current_section == "steps":
 
             step = clean
 
-            if step[:2].isdigit() and "." in step[:3]:
-
+            if (
+                len(step) >= 2
+                and step[0].isdigit()
+                and step[1] == "."
+            ):
                 step = step.split(".", 1)[1].strip()
 
             elif step.startswith("-"):
-
                 step = step[1:].strip()
 
             sections["steps"].append(step)
 
             continue
 
+        # ----------------------------------------------------
+        # Escalation
+        # ----------------------------------------------------
 
         if current_section == "escalation":
 
             if "YES" in upper:
-
                 sections["escalation"] = True
 
             elif "NO" in upper:
-
                 sections["escalation"] = False
 
             continue
 
+        # ----------------------------------------------------
+        # Text sections
+        # ----------------------------------------------------
 
         if current_section == "diagnosis":
-
-            sections["diagnosis"] += (
-                clean + " "
-            )
-
+            sections["diagnosis"] += clean + " "
             continue
-
 
         if current_section == "intent":
-
-            sections["intent"] += (
-                clean + " "
-            )
-
+            sections["intent"] += clean + " "
             continue
-
 
         if current_section == "ai_response":
-
-            sections["ai_response"] += (
-                clean + " "
-            )
-
+            sections["ai_response"] += clean + " "
             continue
-
 
         if current_section == "resolution":
-
-            sections["resolution"] += (
-                clean + " "
-            )
-
+            sections["resolution"] += clean + " "
             continue
-
 
         if current_section == "tool_interpretation":
-
-            sections["tool_interpretation"] += (
-                clean + " "
-            )
-
+            sections["tool_interpretation"] += clean + " "
             continue
-
 
         if current_section == "escalation_guidance":
-
-            sections["escalation_guidance"] += (
-                clean + " "
-            )
-
+            sections["escalation_guidance"] += clean + " "
             continue
-
 
         if current_section == "source":
-
-            sections["source"] += (
-                clean + " "
-            )
-
+            sections["source"] += clean + " "
             continue
 
-
-    # -----------------------------------------------------
-    # CLEAN TEXT
-    # -----------------------------------------------------
+    # --------------------------------------------------------
+    # Clean text fields
+    # --------------------------------------------------------
 
     for key in [
         "diagnosis",
@@ -301,13 +257,12 @@ def parse_agent_response(text):
 
         sections[key] = sections[key].strip()
 
-
     return sections
 
 
-# =========================================================
-# AI HELP API
-# =========================================================
+# ============================================================
+# AI HELP ENDPOINT
+# ============================================================
 
 @app.post("/api/help")
 async def get_help(request: HelpRequest):
@@ -317,32 +272,24 @@ async def get_help(request: HelpRequest):
         request.problem
     )
 
-
     agent_text = result.final_output
 
-
-    parsed = parse_agent_response(
-        agent_text
-    )
-
+    parsed = parse_agent_response(agent_text)
 
     return {
-
         "problem": request.problem,
-
         "status": "analyzed",
 
         "agent_response": {
 
-            "diagnosis":
-                parsed["diagnosis"],
+            "diagnosis": parsed["diagnosis"],
 
-            "intent":
-                parsed["intent"],
+            "intent": parsed["intent"],
 
-            "ai_response":
+            "ai_response": (
                 parsed["ai_response"]
-                or agent_text,
+                or agent_text
+            ),
 
             "possible_causes":
                 parsed["possible_causes"],
@@ -364,15 +311,13 @@ async def get_help(request: HelpRequest):
 
             "source":
                 parsed["source"]
-
         }
-
     }
 
 
-# =========================================================
-# SUPPORT TICKET REQUEST
-# =========================================================
+# ============================================================
+# TICKET REQUEST MODEL
+# ============================================================
 
 class TicketRequest(BaseModel):
 
@@ -385,188 +330,46 @@ class TicketRequest(BaseModel):
     source: str = ""
 
 
-# =========================================================
+# ============================================================
 # CREATE SUPPORT TICKET
-# =========================================================
+# ============================================================
 
 @app.post("/api/tickets")
 def create_ticket(request: TicketRequest):
 
-    connection = None
-    cursor = None
+    global next_ticket_id
 
-    try:
+    ticket = {
+        "id": next_ticket_id,
+        "user_problem": request.user_problem,
+        "diagnosis": request.diagnosis,
+        "status": "Open",
+        "priority": request.priority,
+        "source": request.source,
+        "created_at": datetime.utcnow().isoformat()
+    }
 
-        connection = get_db_connection()
+    tickets_store.append(ticket)
 
-        cursor = connection.cursor()
+    current_id = next_ticket_id
 
+    next_ticket_id += 1
 
-        query = """
-
-            INSERT INTO tickets
-            (
-                user_problem,
-                diagnosis,
-                status,
-                priority,
-                source
-            )
-
-            VALUES
-            (
-                %s,
-                %s,
-                %s,
-                %s,
-                %s
-            )
-
-        """
+    return {
+        "status": "success",
+        "message": "Support ticket created successfully.",
+        "ticket_id": current_id
+    }
 
 
-        values = (
-
-            request.user_problem,
-
-            request.diagnosis,
-
-            "Open",
-
-            request.priority,
-
-            request.source
-
-        )
-
-
-        cursor.execute(
-            query,
-            values
-        )
-
-
-        connection.commit()
-
-
-        ticket_id = cursor.lastrowid
-
-
-        return {
-
-            "status": "success",
-
-            "message":
-                "Support ticket created successfully.",
-
-            "ticket_id":
-                ticket_id
-
-        }
-
-
-    except Exception as e:
-
-        return {
-
-            "status": "error",
-
-            "message":
-                "Failed to create support ticket.",
-
-            "error":
-                str(e)
-
-        }
-
-
-    finally:
-
-        if cursor:
-
-            cursor.close()
-
-
-        if connection:
-
-            connection.close()
-
-
-# =========================================================
-# GET ALL SUPPORT TICKETS
-# =========================================================
+# ============================================================
+# GET SUPPORT TICKETS
+# ============================================================
 
 @app.get("/api/tickets")
 def get_tickets():
 
-    connection = None
-    cursor = None
-
-    try:
-
-        connection = get_db_connection()
-
-
-        cursor = connection.cursor(
-            dictionary=True
-        )
-
-
-        query = """
-
-            SELECT
-                id,
-                user_problem,
-                diagnosis,
-                status,
-                priority,
-                source,
-                created_at
-
-            FROM tickets
-
-            ORDER BY id DESC
-
-        """
-
-
-        cursor.execute(query)
-
-
-        tickets = cursor.fetchall()
-
-
-        return {
-
-            "status": "success",
-
-            "tickets": tickets
-
-        }
-
-
-    except Exception as e:
-
-        return {
-
-            "status": "error",
-
-            "message":
-                "Failed to fetch support tickets.",
-
-            "error":
-                str(e)
-
-        }
-
-
-    finally:
-
-        if cursor:
-
-            cursor.close()
-
-
-        if connection:
-
-            connection.close()
+    return {
+        "status": "success",
+        "tickets": list(reversed(tickets_store))
+    }
