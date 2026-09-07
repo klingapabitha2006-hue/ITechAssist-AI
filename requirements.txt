@@ -6,3 +6,4 @@ mysql-connector-python
 pydantic
 scikit-learn
 psutil
+openai-agents
