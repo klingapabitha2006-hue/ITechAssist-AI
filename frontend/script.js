@@ -1,13 +1,10 @@
-const API_URL = "http://127.0.0.1:8000/api/help";
-const TICKET_API_URL = "http://127.0.0.1:8000/api/tickets";
+const API_URL = "https://itechassist-ai.onrender.com/api/help";
+const TICKET_API_URL = "https://itechassist-ai.onrender.com/api/tickets";
 
 const input = document.getElementById("problemInput");
 const sendButton = document.getElementById("sendButton");
 const messages = document.getElementById("messages");
 const chatHistory = document.getElementById("chatHistory");
-
-
-
 
 let chatHistories = JSON.parse(
     localStorage.getItem("itechassist_history") || "[]"
@@ -18,7 +15,9 @@ let currentConversation = null;
 renderChatHistory();
 
 
-
+// ============================================================
+// SEND USER PROBLEM
+// ============================================================
 
 async function sendProblem() {
 
@@ -41,7 +40,6 @@ async function sendProblem() {
             title: problem,
             messages: []
         };
-
     }
 
     currentConversation.messages.push({
@@ -75,7 +73,10 @@ async function sendProblem() {
         });
 
         if (!response.ok) {
-            throw new Error("Backend request failed");
+
+            throw new Error(
+                `Backend request failed: ${response.status}`
+            );
         }
 
         const data = await response.json();
@@ -89,7 +90,6 @@ async function sendProblem() {
             data: data
         });
 
-        
         await saveTicket(problem, data);
 
         saveCurrentConversation();
@@ -98,25 +98,31 @@ async function sendProblem() {
 
     } catch (error) {
 
-        loadingMessage.remove();
+        if (loadingMessage) {
+            loadingMessage.remove();
+        }
 
         addErrorMessage(
-            "Unable to connect to the IT Helpdesk Agent. Please make sure the FastAPI backend is running."
+            "Unable to connect to the IT Helpdesk Agent. Please try again."
         );
 
-        console.error(error);
+        console.error(
+            "ITechAssist Error:",
+            error
+        );
 
     } finally {
 
         sendButton.disabled = false;
 
         input.focus();
-
     }
 }
 
 
-
+// ============================================================
+// SAVE SUPPORT TICKET
+// ============================================================
 
 async function saveTicket(problem, data) {
 
@@ -124,34 +130,44 @@ async function saveTicket(problem, data) {
 
         const agent = data.agent_response || {};
 
-        const response = await fetch(TICKET_API_URL, {
+        const response = await fetch(
+            TICKET_API_URL,
+            {
+                method: "POST",
 
-            method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
 
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
+                body: JSON.stringify({
 
-            body: JSON.stringify({
+                    user_problem: problem,
 
-                user_problem: problem,
+                    diagnosis:
+                        agent.diagnosis ||
+                        "AI Helpdesk Analysis",
 
-                diagnosis: agent.diagnosis || "",
+                    priority:
+                        getPriority(agent),
 
-                priority: getPriority(agent),
+                    source:
+                        agent.source ||
+                        "OpenAI Agents SDK + RAG"
 
-                source: agent.source || ""
-
-            })
-
-        });
+                })
+            }
+        );
 
         if (!response.ok) {
-            throw new Error("Ticket creation failed");
+
+            throw new Error(
+                "Ticket creation failed"
+            );
         }
 
-        const result = await response.json();
+        const result =
+            await response.json();
 
         console.log(
             "✅ Support ticket result:",
@@ -164,12 +180,13 @@ async function saveTicket(problem, data) {
             "❌ Ticket saving error:",
             error
         );
-
     }
 }
 
 
-
+// ============================================================
+// PRIORITY
+// ============================================================
 
 function getPriority(agent) {
 
@@ -188,13 +205,17 @@ function getPriority(agent) {
 }
 
 
-
+// ============================================================
+// ADD USER MESSAGE
+// ============================================================
 
 function addUserMessage(problem) {
 
-    const message = document.createElement("div");
+    const message =
+        document.createElement("div");
 
-    message.className = "message user-message";
+    message.className =
+        "message user-message";
 
     message.innerHTML = `
 
@@ -214,22 +235,39 @@ function addUserMessage(problem) {
 }
 
 
-
+// ============================================================
+// ADD AI RESPONSE
+// ============================================================
 
 function addAIResponse(data) {
 
-    const agent = data.agent_response;
+    const agent =
+        data.agent_response || {};
 
-    const message = document.createElement("div");
+    const message =
+        document.createElement("div");
 
-    message.className = "message ai-message";
-
-    let causesHTML = "";
-
-    let stepsHTML = "";
+    message.className =
+        "message ai-message";
 
 
-    
+    // --------------------------------------------------------
+    // AI RESPONSE
+    // --------------------------------------------------------
+
+    const aiResponse =
+        agent.ai_response ||
+        "The AI Agent could not generate a response.";
+
+    const formattedResponse =
+        escapeHTML(aiResponse)
+            .replace(/\n\n/g, "<br><br>")
+            .replace(/\n/g, "<br>");
+
+
+    // --------------------------------------------------------
+    // DETECTED INTENT
+    // --------------------------------------------------------
 
     let intentHTML = "";
 
@@ -239,7 +277,9 @@ function addAIResponse(data) {
 
             <div class="intent-tag">
 
-                🧠 <strong>
+                🧠
+
+                <strong>
                     Detected Intent:
                 </strong>
 
@@ -248,11 +288,15 @@ function addAIResponse(data) {
             </div>
 
         `;
-
     }
 
 
-   
+    // --------------------------------------------------------
+    // POSSIBLE CAUSES
+    // --------------------------------------------------------
+
+    let causesHTML = "";
+
     if (
         agent.possible_causes &&
         agent.possible_causes.length > 0
@@ -273,18 +317,23 @@ function addAIResponse(data) {
                             cause =>
                                 `<li>${escapeHTML(cause)}</li>`
                         )
-                        .join("")}
+                        .join("")
+                    }
 
                 </ul>
 
             </div>
 
         `;
-
     }
 
 
-    
+    // --------------------------------------------------------
+    // RECOMMENDED TROUBLESHOOTING
+    // --------------------------------------------------------
+
+    let stepsHTML = "";
+
     if (
         agent.steps &&
         agent.steps.length > 0
@@ -301,95 +350,91 @@ function addAIResponse(data) {
                 <ol class="response-list">
 
                     ${agent.steps
-                        .map(
-                            step =>
-                                `<li>${escapeHTML(step)}</li>`
-                        )
-                        .join("")}
+                        .map(step => {
+
+                            // Remove backend numbering
+                            // Example:
+                            // "1. Check connection"
+                            // becomes:
+                            // "Check connection"
+
+                            const cleanStep =
+                                String(step)
+                                    .replace(
+                                        /^\s*\d+[.)]\s*/,
+                                        ""
+                                    )
+                                    .trim();
+
+                            return `
+                                <li>
+                                    ${escapeHTML(cleanStep)}
+                                </li>
+                            `;
+
+                        })
+                        .join("")
+                    }
 
                 </ol>
 
             </div>
 
         `;
-
     }
 
 
-    
+    // --------------------------------------------------------
+    // RESOLUTION
+    // --------------------------------------------------------
 
-    let toolInterpretationHTML = "";
+    let resolutionHTML = "";
 
-    if (agent.tool_interpretation) {
+    if (agent.resolution) {
 
-        toolInterpretationHTML = `
+        resolutionHTML = `
 
-            <div class="tool-interpretation">
-
-                <strong>
-                    🧠 AI Diagnostic Finding
-                </strong>
-
-                <p>
-                    ${escapeHTML(
-                        agent.tool_interpretation
-                            .replace(
-                                "AI Diagnostic Finding: ",
-                                ""
-                            )
-                    )}
-                </p>
-
-            </div>
-
-        `;
-
-    }
-
-
-    
-    let aiResponseHTML = "";
-
-    if (agent.ai_response) {
-
-        aiResponseHTML = `
-
-            <div class="response-section ai-agent-response">
+            <div class="response-section">
 
                 <div class="response-section-title">
-                    🤖 AI Agent Analysis
+                    Resolution
                 </div>
 
                 <div>
-                    ${escapeHTML(agent.ai_response)}
+                    ${escapeHTML(agent.resolution)}
                 </div>
 
             </div>
 
         `;
-
     }
 
 
-    
+    // --------------------------------------------------------
+    // TOOL RESULT
+    // --------------------------------------------------------
 
     let toolHTML = "";
 
     if (agent.tool_result) {
 
-        const tool = agent.tool_result;
+        const tool =
+            agent.tool_result;
 
-
-        
         if (
-            tool.tool === "System Resource Diagnostic"
+            tool.tool ===
+            "System Resource Diagnostic"
         ) {
 
             const cpuUsage =
-                Number(tool.cpu_usage_percent ?? 0);
+                Number(
+                    tool.cpu_usage_percent ?? 0
+                );
 
             const memoryUsage =
-                Number(tool.memory_usage_percent ?? 0);
+                Number(
+                    tool.memory_usage_percent ?? 0
+                );
 
             toolHTML = `
 
@@ -403,6 +448,7 @@ function addAIResponse(data) {
 
                         <p>
                             💻 CPU Usage:
+
                             <strong>
                                 ${cpuUsage}%
                             </strong>
@@ -410,6 +456,7 @@ function addAIResponse(data) {
 
                         <p>
                             🧠 Memory Usage:
+
                             <strong>
                                 ${memoryUsage}%
                             </strong>
@@ -418,18 +465,20 @@ function addAIResponse(data) {
                     </div>
 
                     <p>
-                        🟢 ${escapeHTML(tool.message)}
+
+                        🟢
+
+                        ${escapeHTML(
+                            tool.message || ""
+                        )}
+
                     </p>
 
                 </div>
 
             `;
 
-        }
-
-
-        
-        else {
+        } else {
 
             const isOnline =
                 tool.status === "online";
@@ -439,27 +488,73 @@ function addAIResponse(data) {
                 <div class="tool-card">
 
                     <strong>
-                        🛠️ ${escapeHTML(tool.tool)}
+
+                        🛠️
+
+                        ${escapeHTML(
+                            tool.tool ||
+                            "Diagnostic Tool"
+                        )}
+
                     </strong>
 
                     <p>
 
-                        ${isOnline ? "🟢" : "🔴"}
+                        ${
+                            isOnline
+                                ? "🟢"
+                                : "🔴"
+                        }
 
-                        ${escapeHTML(tool.message)}
+                        ${escapeHTML(
+                            tool.message || ""
+                        )}
 
                     </p>
 
                 </div>
 
             `;
-
         }
-
     }
 
 
-    
+    // --------------------------------------------------------
+    // AI DIAGNOSTIC FINDING
+    // --------------------------------------------------------
+
+    let toolInterpretationHTML = "";
+
+    if (agent.tool_interpretation) {
+
+        const finding =
+            agent.tool_interpretation
+                .replace(
+                    "AI Diagnostic Finding: ",
+                    ""
+                );
+
+        toolInterpretationHTML = `
+
+            <div class="tool-interpretation">
+
+                <strong>
+                    🧠 AI Diagnostic Finding
+                </strong>
+
+                <p>
+                    ${escapeHTML(finding)}
+                </p>
+
+            </div>
+
+        `;
+    }
+
+
+    // --------------------------------------------------------
+    // ESCALATION
+    // --------------------------------------------------------
 
     let escalationHTML = "";
 
@@ -472,7 +567,9 @@ function addAIResponse(data) {
 
             <div class="escalation">
 
-                🚨 <strong>
+                🚨
+
+                <strong>
                     Escalation Guidance
                 </strong>
 
@@ -485,11 +582,12 @@ function addAIResponse(data) {
             </div>
 
         `;
-
     }
 
 
-    
+    // --------------------------------------------------------
+    // SOURCE
+    // --------------------------------------------------------
 
     let sourceHTML = "";
 
@@ -500,16 +598,20 @@ function addAIResponse(data) {
             <div class="source-tag">
 
                 📚 Source:
-                ${escapeHTML(agent.source)}
+
+                ${escapeHTML(
+                    agent.source
+                )}
 
             </div>
 
         `;
-
     }
 
 
-    
+    // --------------------------------------------------------
+    // MAIN AI MESSAGE
+    // --------------------------------------------------------
 
     message.innerHTML = `
 
@@ -519,29 +621,39 @@ function addAIResponse(data) {
 
         <div class="response-title">
 
-            🔍 ${escapeHTML(agent.diagnosis)}
+            🔍
+
+            ${
+                agent.diagnosis
+                    ? escapeHTML(agent.diagnosis)
+                    : "AI IT Helpdesk Diagnosis"
+            }
 
         </div>
 
         ${intentHTML}
 
-        ${aiResponseHTML}
+        <div class="response-section ai-agent-response">
+
+            <div class="response-section-title">
+
+                🤖 AI Agent Analysis
+
+            </div>
+
+            <div class="ai-response-content">
+
+                ${formattedResponse}
+
+            </div>
+
+        </div>
 
         ${causesHTML}
 
         ${stepsHTML}
 
-        <div class="response-section">
-
-            <div class="response-section-title">
-                Resolution
-            </div>
-
-            <div>
-                ${escapeHTML(agent.resolution)}
-            </div>
-
-        </div>
+        ${resolutionHTML}
 
         ${toolHTML}
 
@@ -551,6 +663,26 @@ function addAIResponse(data) {
 
         ${sourceHTML}
 
+        <div class="agent-framework-badge">
+
+            <span>
+                🧠
+            </span>
+
+            <div>
+
+                <strong>
+                    OpenAI Agents SDK
+                </strong>
+
+                <small>
+                    Agent + RAG + Tools
+                </small>
+
+            </div>
+
+        </div>
+
     `;
 
     messages.appendChild(message);
@@ -559,11 +691,14 @@ function addAIResponse(data) {
 }
 
 
-
+// ============================================================
+// LOADING / AGENT PROCESSING ANIMATION
+// ============================================================
 
 function addLoadingMessage() {
 
-    const message = document.createElement("div");
+    const message =
+        document.createElement("div");
 
     message.className =
         "message ai-message agent-processing";
@@ -577,58 +712,107 @@ function addLoadingMessage() {
         <div class="agent-flow">
 
             <div class="agent-flow-title">
+
                 <span class="agent-pulse"></span>
+
                 AI Agent is analyzing your issue
+
             </div>
 
             <div class="agent-step active">
-                <span class="step-icon">🧠</span>
-                <span class="step-text">
-                    Detecting IT issue intent
+
+                <span class="step-icon">
+                    🧠
                 </span>
+
+                <span class="step-text">
+                    AI Agent analyzing issue
+                </span>
+
                 <span class="step-status">
                     Processing
                 </span>
+
             </div>
 
             <div class="agent-step">
-                <span class="step-icon">📚</span>
+
+                <span class="step-icon">
+                    📚
+                </span>
+
                 <span class="step-text">
                     Searching Knowledge Base
                 </span>
+
                 <span class="step-status">
                     Waiting
                 </span>
+
             </div>
 
             <div class="agent-step">
-                <span class="step-icon">🔍</span>
+
+                <span class="step-icon">
+                    🔍
+                </span>
+
                 <span class="step-text">
                     Analyzing possible causes
                 </span>
+
                 <span class="step-status">
                     Waiting
                 </span>
+
             </div>
 
             <div class="agent-step">
-                <span class="step-icon">🛠️</span>
+
+                <span class="step-icon">
+                    🛠️
+                </span>
+
                 <span class="step-text">
                     Running diagnostic tools
                 </span>
+
                 <span class="step-status">
                     Waiting
                 </span>
+
             </div>
 
             <div class="agent-step">
-                <span class="step-icon">✅</span>
-                <span class="step-text">
-                    Preparing recommendation
+
+                <span class="step-icon">
+                    🤖
                 </span>
+
+                <span class="step-text">
+                    Generating AI recommendation
+                </span>
+
                 <span class="step-status">
                     Waiting
                 </span>
+
+            </div>
+
+            <div class="agent-step">
+
+                <span class="step-icon">
+                    ✅
+                </span>
+
+                <span class="step-text">
+                    Preparing final response
+                </span>
+
+                <span class="step-status">
+                    Waiting
+                </span>
+
             </div>
 
         </div>
@@ -639,23 +823,23 @@ function addLoadingMessage() {
 
     scrollToBottom();
 
-
-    
-
     const steps =
-        message.querySelectorAll(".agent-step");
+        message.querySelectorAll(
+            ".agent-step"
+        );
 
     let currentStep = 0;
 
     const interval =
         setInterval(() => {
 
-            if (!document.body.contains(message)) {
+            if (
+                !document.body.contains(message)
+            ) {
 
                 clearInterval(interval);
 
                 return;
-
             }
 
             if (currentStep > 0) {
@@ -668,25 +852,32 @@ function addLoadingMessage() {
 
                 const previousStatus =
                     steps[currentStep - 1]
-                        .querySelector(".step-status");
+                        .querySelector(
+                            ".step-status"
+                        );
 
                 if (previousStatus) {
+
                     previousStatus.textContent =
                         "Completed";
                 }
-
             }
 
-            if (currentStep < steps.length) {
+            if (
+                currentStep < steps.length
+            ) {
 
                 steps[currentStep]
                     .classList.add("active");
 
                 const currentStatus =
                     steps[currentStep]
-                        .querySelector(".step-status");
+                        .querySelector(
+                            ".step-status"
+                        );
 
                 if (currentStatus) {
+
                     currentStatus.textContent =
                         "Processing";
                 }
@@ -697,20 +888,24 @@ function addLoadingMessage() {
 
         }, 450);
 
-
-    message._processingInterval = interval;
+    message._processingInterval =
+        interval;
 
     return message;
 }
 
 
-
+// ============================================================
+// ERROR MESSAGE
+// ============================================================
 
 function addErrorMessage(text) {
 
-    const message = document.createElement("div");
+    const message =
+        document.createElement("div");
 
-    message.className = "message ai-message";
+    message.className =
+        "message ai-message";
 
     message.innerHTML = `
 
@@ -719,7 +914,8 @@ function addErrorMessage(text) {
         </div>
 
         <div>
-            ⚠️ ${escapeHTML(text)}
+            ⚠️
+            ${escapeHTML(text)}
         </div>
 
     `;
@@ -728,9 +924,9 @@ function addErrorMessage(text) {
 
     scrollToBottom();
 }
-
-
-
+// ============================================================
+// SET QUICK PROBLEM
+// ============================================================
 
 function setProblem(problem) {
 
@@ -743,7 +939,9 @@ function setProblem(problem) {
 }
 
 
-
+// ============================================================
+// START NEW ISSUE
+// ============================================================
 
 function startNewIssue() {
 
@@ -755,63 +953,98 @@ function startNewIssue() {
 
     input.value = "";
 
+
     const welcome =
-        document.querySelector(".welcome");
+        document.querySelector(
+            ".welcome"
+        );
+
 
     if (welcome) {
+
         welcome.style.display = "";
+
     }
+
 
     const topbarTitle =
-        document.querySelector(".topbar strong");
+        document.querySelector(
+            ".topbar strong"
+        );
+
 
     if (topbarTitle) {
-        topbarTitle.textContent = "New IT Issue";
+
+        topbarTitle.textContent =
+            "New IT Issue";
+
     }
+
 
     input.focus();
 
 }
 
 
-
+// ============================================================
+// SAVE CURRENT CONVERSATION
+// ============================================================
 
 function saveCurrentConversation() {
 
     if (!currentConversation) {
+
         return;
+
     }
+
 
     chatHistories =
         chatHistories.filter(
             chat =>
-                chat.id !== currentConversation.id
+                chat.id !==
+                currentConversation.id
         );
+
 
     chatHistories.unshift(
         currentConversation
     );
 
+
     chatHistories =
-        chatHistories.slice(0, 20);
+        chatHistories.slice(
+            0,
+            20
+        );
+
 
     localStorage.setItem(
         "itechassist_history",
-        JSON.stringify(chatHistories)
+        JSON.stringify(
+            chatHistories
+        )
     );
 
 }
 
 
-
+// ============================================================
+// RENDER CHAT HISTORY
+// ============================================================
 
 function renderChatHistory() {
 
     if (!chatHistory) {
+
         return;
+
     }
 
-    if (chatHistories.length === 0) {
+
+    if (
+        chatHistories.length === 0
+    ) {
 
         chatHistory.innerHTML = `
 
@@ -822,81 +1055,122 @@ function renderChatHistory() {
         `;
 
         return;
+
     }
+
 
     chatHistory.innerHTML = "";
 
-    chatHistories.forEach(chat => {
 
-        const historyItem =
-            document.createElement("button");
+    chatHistories.forEach(
+        chat => {
 
-        historyItem.className =
-            "history-item";
+            const historyItem =
+                document.createElement(
+                    "button"
+                );
 
-        historyItem.title = chat.title;
 
-        historyItem.innerHTML = `
+            historyItem.className =
+                "history-item";
 
-            <span class="history-icon">
-                💬
-            </span>
 
-            <span class="history-title">
+            historyItem.title =
+                chat.title;
 
-                ${escapeHTML(
-                    truncateText(chat.title, 28)
-                )}
 
-            </span>
+            historyItem.innerHTML = `
 
-        `;
+                <span class="history-icon">
+                    💬
+                </span>
 
-        historyItem.onclick = () => {
+                <span class="history-title">
 
-            loadConversation(chat.id);
+                    ${escapeHTML(
+                        truncateText(
+                            chat.title,
+                            28
+                        )
+                    )}
 
-        };
+                </span>
 
-        chatHistory.appendChild(
-            historyItem
-        );
+            `;
 
-    });
+
+            historyItem.onclick = () => {
+
+                loadConversation(
+                    chat.id
+                );
+
+            };
+
+
+            chatHistory.appendChild(
+                historyItem
+            );
+
+        }
+    );
 
 }
 
 
+// ============================================================
+// LOAD OLD CONVERSATION
+// ============================================================
 
 function loadConversation(id) {
 
     showHelpdesk();
 
+
     const conversation =
         chatHistories.find(
-            chat => chat.id === id
+            chat =>
+                chat.id === id
         );
 
+
     if (!conversation) {
+
         return;
+
     }
+
 
     currentConversation =
         JSON.parse(
-            JSON.stringify(conversation)
+            JSON.stringify(
+                conversation
+            )
         );
+
 
     messages.innerHTML = "";
 
+
     const welcome =
-        document.querySelector(".welcome");
+        document.querySelector(
+            ".welcome"
+        );
+
 
     if (welcome) {
-        welcome.style.display = "none";
+
+        welcome.style.display =
+            "none";
+
     }
 
+
     const topbarTitle =
-        document.querySelector(".topbar strong");
+        document.querySelector(
+            ".topbar strong"
+        );
+
 
     if (topbarTitle) {
 
@@ -908,60 +1182,101 @@ function loadConversation(id) {
 
     }
 
-    conversation.messages.forEach(msg => {
 
-        if (msg.type === "user") {
+    conversation.messages.forEach(
+        msg => {
 
-            addUserMessage(
-                msg.content
-            );
+            if (
+                msg.type === "user"
+            ) {
+
+                addUserMessage(
+                    msg.content
+                );
+
+            }
+
+
+            if (
+                msg.type === "ai"
+            ) {
+
+                addAIResponse(
+                    msg.data
+                );
+
+            }
 
         }
+    );
 
-        if (msg.type === "ai") {
-
-            addAIResponse(
-                msg.data
-            );
-
-        }
-
-    });
 
     input.focus();
 
 }
 
 
+// ============================================================
+// SHOW MY TICKETS
+// ============================================================
 
 async function showMyTickets() {
 
-    const welcome = document.querySelector(".welcome");
+    const welcome =
+        document.querySelector(
+            ".welcome"
+        );
+
 
     if (welcome) {
-        welcome.style.display = "none";
+
+        welcome.style.display =
+            "none";
+
     }
+
 
     const inputWrapper =
-        document.querySelector(".input-wrapper");
+        document.querySelector(
+            ".input-wrapper"
+        );
+
 
     const inputNote =
-        document.querySelector(".input-note");
+        document.querySelector(
+            ".input-note"
+        );
+
 
     if (inputWrapper) {
-        inputWrapper.style.display = "none";
+
+        inputWrapper.style.display =
+            "none";
+
     }
+
 
     if (inputNote) {
-        inputNote.style.display = "none";
+
+        inputNote.style.display =
+            "none";
+
     }
+
 
     const topbarTitle =
-        document.querySelector(".topbar strong");
+        document.querySelector(
+            ".topbar strong"
+        );
+
 
     if (topbarTitle) {
-        topbarTitle.textContent = "My Tickets";
+
+        topbarTitle.textContent =
+            "My Tickets";
+
     }
+
 
     messages.innerHTML = `
 
@@ -981,14 +1296,18 @@ async function showMyTickets() {
 
                 </div>
 
+
                 <button
                     class="ticket-back-btn"
                     onclick="showHelpdesk()"
                 >
+
                     ← Back to Helpdesk
+
                 </button>
 
             </div>
+
 
             <div class="tickets-loading">
                 Loading tickets...
@@ -998,26 +1317,39 @@ async function showMyTickets() {
 
     `;
 
+
     try {
 
         const response =
-            await fetch(TICKET_API_URL, {
-
-                method: "GET",
-
-                headers: {
-                    "Accept": "application/json"
+            await fetch(
+                TICKET_API_URL,
+                {
+                    method: "GET",
+                    headers: {
+                        "Accept":
+                            "application/json"
+                    }
                 }
+            );
 
-            });
 
         if (!response.ok) {
-            throw new Error("Failed to fetch tickets");
+
+            throw new Error(
+                "Failed to fetch tickets"
+            );
+
         }
 
-        const data = await response.json();
 
-        renderTickets(data.tickets || []);
+        const data =
+            await response.json();
+
+
+        renderTickets(
+            data.tickets || []
+        );
+
 
     } catch (error) {
 
@@ -1026,8 +1358,12 @@ async function showMyTickets() {
             error
         );
 
+
         const ticketsPage =
-            document.querySelector(".tickets-page");
+            document.querySelector(
+                ".tickets-page"
+            );
+
 
         if (ticketsPage) {
 
@@ -1039,19 +1375,24 @@ async function showMyTickets() {
                         ⚠️
                     </div>
 
+
                     <h3>
                         Unable to load tickets
                     </h3>
+
 
                     <p>
                         Please make sure the FastAPI backend is running.
                     </p>
 
+
                     <button
                         class="ticket-back-btn"
                         onclick="showHelpdesk()"
                     >
+
                         ← Back to Helpdesk
+
                     </button>
 
                 </div>
@@ -1065,16 +1406,24 @@ async function showMyTickets() {
 }
 
 
-
+// ============================================================
+// RENDER TICKETS
+// ============================================================
 
 function renderTickets(tickets) {
 
     const ticketsPage =
-        document.querySelector(".tickets-page");
+        document.querySelector(
+            ".tickets-page"
+        );
+
 
     if (!ticketsPage) {
+
         return;
+
     }
+
 
     if (tickets.length === 0) {
 
@@ -1094,14 +1443,18 @@ function renderTickets(tickets) {
 
                 </div>
 
+
                 <button
                     class="ticket-back-btn"
                     onclick="showHelpdesk()"
                 >
+
                     ← Back to Helpdesk
+
                 </button>
 
             </div>
+
 
             <div class="empty-tickets">
 
@@ -1109,9 +1462,11 @@ function renderTickets(tickets) {
                     🎫
                 </div>
 
+
                 <h3>
                     No tickets yet
                 </h3>
+
 
                 <p>
                     Your support tickets will appear here.
@@ -1122,88 +1477,141 @@ function renderTickets(tickets) {
         `;
 
         return;
+
     }
 
 
-    const ticketCards = tickets.map(ticket => {
+    const ticketCards =
+        tickets.map(
+            ticket => {
 
-        const priorityClass =
-            (ticket.priority || "Medium")
-                .toLowerCase();
+                const priorityClass =
+                    (
+                        ticket.priority ||
+                        "Medium"
+                    )
+                    .toLowerCase();
 
-        const statusClass =
-            (ticket.status || "Open")
-                .toLowerCase();
 
-        const createdDate =
-            formatTicketDate(ticket.created_at);
+                const statusClass =
+                    (
+                        ticket.status ||
+                        "Open"
+                    )
+                    .toLowerCase();
 
-        return `
 
-            <div class="ticket-card">
+                const createdDate =
+                    formatTicketDate(
+                        ticket.created_at
+                    );
 
-                <div class="ticket-card-top">
 
-                    <div class="ticket-id">
-                        #${escapeHTML(String(ticket.id))}
+                return `
+
+                    <div class="ticket-card">
+
+                        <div class="ticket-card-top">
+
+                            <div class="ticket-id">
+
+                                #${escapeHTML(
+                                    String(
+                                        ticket.id
+                                    )
+                                )}
+
+                            </div>
+
+
+                            <div class="ticket-badges">
+
+                                <span
+                                    class="ticket-priority ${priorityClass}"
+                                >
+
+                                    ${escapeHTML(
+                                        ticket.priority ||
+                                        "Medium"
+                                    )}
+
+                                </span>
+
+
+                                <span
+                                    class="ticket-status ${statusClass}"
+                                >
+
+                                    ${escapeHTML(
+                                        ticket.status ||
+                                        "Open"
+                                    )}
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="ticket-problem">
+
+                            ${escapeHTML(
+                                ticket.user_problem ||
+                                "No problem description"
+                            )}
+
+                        </div>
+
+
+                        <div class="ticket-diagnosis">
+
+                            <span>
+                                Diagnosis
+                            </span>
+
+
+                            ${escapeHTML(
+                                ticket.diagnosis ||
+                                "Not available"
+                            )}
+
+                        </div>
+
+
+                        <div class="ticket-footer">
+
+                            <span>
+
+                                📚
+
+                                ${escapeHTML(
+                                    ticket.source ||
+                                    "Knowledge Base"
+                                )}
+
+                            </span>
+
+
+                            <span>
+
+                                🕒
+
+                                ${escapeHTML(
+                                    createdDate
+                                )}
+
+                            </span>
+
+                        </div>
+
                     </div>
 
-                    <div class="ticket-badges">
+                `;
 
-                        <span class="ticket-priority ${priorityClass}">
-                            ${escapeHTML(ticket.priority || "Medium")}
-                        </span>
-
-                        <span class="ticket-status ${statusClass}">
-                            ${escapeHTML(ticket.status || "Open")}
-                        </span>
-
-                    </div>
-
-                </div>
-
-
-                <div class="ticket-problem">
-
-                    ${escapeHTML(
-                        ticket.user_problem || "No problem description"
-                    )}
-
-                </div>
-
-
-                <div class="ticket-diagnosis">
-
-                    <span>
-                        Diagnosis
-                    </span>
-
-                    ${escapeHTML(
-                        ticket.diagnosis || "Not available"
-                    )}
-
-                </div>
-
-
-                <div class="ticket-footer">
-
-                    <span>
-                        📚 ${escapeHTML(
-                            ticket.source || "Knowledge Base"
-                        )}
-                    </span>
-
-                    <span>
-                        🕒 ${escapeHTML(createdDate)}
-                    </span>
-
-                </div>
-
-            </div>
-
-        `;
-
-    }).join("");
+            }
+        )
+        .join("");
 
 
     ticketsPage.innerHTML = `
@@ -1216,17 +1624,25 @@ function renderTickets(tickets) {
                     Support Tickets
                 </div>
 
+
                 <div class="tickets-subtitle">
-                    ${tickets.length} ticket${tickets.length === 1 ? "" : "s"} found
+
+                    ${tickets.length}
+                    ticket${tickets.length === 1 ? "" : "s"}
+                    found
+
                 </div>
 
             </div>
+
 
             <button
                 class="ticket-back-btn"
                 onclick="showHelpdesk()"
             >
+
                 ← Back to Helpdesk
+
             </button>
 
         </div>
@@ -1243,20 +1659,33 @@ function renderTickets(tickets) {
 }
 
 
-
+// ============================================================
+// FORMAT TICKET DATE
+// ============================================================
 
 function formatTicketDate(dateValue) {
 
     if (!dateValue) {
+
         return "Unknown date";
+
     }
+
 
     const date =
         new Date(dateValue);
 
-    if (isNaN(date.getTime())) {
+
+    if (
+        isNaN(
+            date.getTime()
+        )
+    ) {
+
         return dateValue;
+
     }
+
 
     return date.toLocaleString(
         "en-IN",
@@ -1272,38 +1701,70 @@ function formatTicketDate(dateValue) {
 }
 
 
+// ============================================================
+// SHOW HELPDESK
+// ============================================================
 
 function showHelpdesk() {
 
     const inputWrapper =
-        document.querySelector(".input-wrapper");
+        document.querySelector(
+            ".input-wrapper"
+        );
+
 
     const inputNote =
-        document.querySelector(".input-note");
+        document.querySelector(
+            ".input-note"
+        );
+
 
     if (inputWrapper) {
-        inputWrapper.style.display = "";
+
+        inputWrapper.style.display =
+            "";
+
     }
+
 
     if (inputNote) {
-        inputNote.style.display = "";
+
+        inputNote.style.display =
+            "";
+
     }
+
 
     const topbarTitle =
-        document.querySelector(".topbar strong");
+        document.querySelector(
+            ".topbar strong"
+        );
+
 
     if (topbarTitle) {
-        topbarTitle.textContent = "New IT Issue";
+
+        topbarTitle.textContent =
+            "New IT Issue";
+
     }
+
 
     messages.innerHTML = "";
 
+
     const welcome =
-        document.querySelector(".welcome");
+        document.querySelector(
+            ".welcome"
+        );
+
 
     if (welcome) {
-        welcome.style.display = "";
+
+        welcome.style.display =
+            "";
+
     }
+
 
     input.value = "";
 
@@ -1312,22 +1773,44 @@ function showHelpdesk() {
 }
 
 
+// ============================================================
+// TRUNCATE TEXT
+// ============================================================
 
-function truncateText(text, maxLength) {
+function truncateText(
+    text,
+    maxLength
+) {
 
-    if (text.length <= maxLength) {
-        return text;
+    if (!text) {
+
+        return "";
+
     }
 
-    return text.substring(
-        0,
-        maxLength
-    ) + "...";
+
+    if (
+        text.length <= maxLength
+    ) {
+
+        return text;
+
+    }
+
+
+    return (
+        text.substring(
+            0,
+            maxLength
+        ) + "..."
+    );
 
 }
 
 
-
+// ============================================================
+// ENTER KEY
+// ============================================================
 
 function handleKeyDown(event) {
 
@@ -1345,33 +1828,48 @@ function handleKeyDown(event) {
 }
 
 
+// ============================================================
+// SCROLL
+// ============================================================
 
 function scrollToBottom() {
 
-    setTimeout(() => {
+    setTimeout(
+        () => {
 
-        window.scrollTo({
+            window.scrollTo({
 
-            top:
-                document.body.scrollHeight,
+                top:
+                    document.body
+                        .scrollHeight,
 
-            behavior: "smooth"
+                behavior:
+                    "smooth"
 
-        });
+            });
 
-    }, 50);
+        },
+        50
+    );
 
 }
 
 
+// ============================================================
+// ESCAPE HTML
+// ============================================================
 
 function escapeHTML(value) {
 
     const div =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     div.textContent =
         value ?? "";
+
 
     return div.innerHTML;
 
