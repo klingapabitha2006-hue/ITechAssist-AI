@@ -1,0 +1,28 @@
+IT HELP DESK KNOWLEDGE BASE
+Category: Email Issues
+
+Problem: User cannot send or receive emails
+
+Possible Causes:
+1. Internet connection problem
+2. Incorrect email account configuration
+3. Mailbox storage limit reached
+4. Email server temporarily unavailable
+5. Incorrect username or password
+6. Email application synchronization problem
+
+Troubleshooting Steps:
+1. Check that the computer has an active internet connection.
+2. Verify that the correct email account is configured.
+3. Check whether the mailbox storage limit has been reached.
+4. Restart the email application and try again.
+5. Sign out and sign in again to the email account.
+6. Check whether the email service is experiencing a temporary outage.
+7. Verify that the email account password is correct.
+8. Try accessing the email account through the webmail service.
+
+Resolution:
+Checking the internet connection, restarting the email application, correcting account settings, or clearing mailbox storage may resolve the email issue.
+
+Escalation:
+If the user still cannot send or receive emails after troubleshooting, escalate the issue to the IT support team or email administrator.

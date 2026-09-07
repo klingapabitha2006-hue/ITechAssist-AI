@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ITechAssist AI</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="app">
+
+        
+        <aside class="sidebar">
+
+            <div class="brand">
+
+                <div class="brand-icon">
+                    ✦
+                </div>
+
+                <div>
+                    <h2>ITechAssist</h2>
+                    <span>AI Helpdesk</span>
+                </div>
+
+            </div>
+
+
+            <button
+                class="new-issue-btn"
+                onclick="startNewIssue()"
+            >
+                <span>＋</span>
+                New Issue
+            </button>
+
+
+            <button
+                class="side-item my-tickets-btn"
+                onclick="showMyTickets()"
+            >
+                <span>🎫</span>
+                My Tickets
+            </button>
+
+
+           
+            <div class="sidebar-section">
+
+                <p class="section-title">
+                    QUICK ACCESS
+                </p>
+
+
+                <button
+                    class="side-item"
+                    onclick="setProblem('My WiFi is connected but internet is not working')"
+                >
+                    <span>◉</span>
+                    WiFi & Internet
+                </button>
+
+
+                <button
+                    class="side-item"
+                    onclick="setProblem('My computer is running very slowly')"
+                >
+                    <span>◈</span>
+                    System Performance
+                </button>
+
+
+                <button
+                    class="side-item"
+                    onclick="setProblem('I cannot access my account')"
+                >
+                    <span>◎</span>
+                    Login & Access
+                </button>
+
+
+                <button
+                    class="side-item"
+                    onclick="setProblem('My printer is not working')"
+                >
+                    <span>▣</span>
+                    Printer Issue
+                </button>
+
+            </div>
+
+
+            
+            <div class="sidebar-section chat-history-section">
+
+                <p class="section-title">
+                    CHAT HISTORY
+                </p>
+
+
+                <div
+                    id="chatHistory"
+                    class="chat-history"
+                >
+
+                    <div class="history-empty">
+                        No previous conversations
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            
+            <div class="sidebar-section">
+
+                <p class="section-title">
+                    AGENT CAPABILITIES
+                </p>
+
+
+                <div class="capability">
+
+                    <span class="status-dot"></span>
+
+                    AI Agent
+
+                </div>
+
+
+                <div class="capability">
+
+                    <span class="status-dot"></span>
+
+                    Knowledge Base
+
+                </div>
+
+
+                <div class="capability">
+
+                    <span class="status-dot"></span>
+
+                    Diagnostic Tools
+
+                </div>
+
+            </div>
+
+
+            
+            <div class="sidebar-bottom">
+
+                <div class="system-status">
+
+                    <span class="online-dot"></span>
+
+                    <div>
+
+                        <strong>
+                            System Online
+                        </strong>
+
+                        <small>
+                            All services operational
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+
+        
+        <main class="main">
+
+
+            
+            <header class="topbar">
+
+                <div>
+
+                    <span class="breadcrumb">
+                        Helpdesk /
+                    </span>
+
+                    <strong>
+                        New IT Issue
+                    </strong>
+
+                </div>
+
+
+                <div class="agent-status">
+
+                    <span class="online-dot"></span>
+
+                    Agent Online
+
+                </div>
+
+            </header>
+
+
+            
+            <section class="chat-container">
+
+
+                
+                <div class="welcome">
+
+                    <div class="welcome-icon">
+                        ✦
+                    </div>
+
+
+                    <h1>
+                        How can I help you?
+                    </h1>
+
+
+                    <p>
+                        Describe your IT problem and I’ll diagnose it,
+                        search the knowledge base, and recommend the
+                        best troubleshooting steps.
+                    </p>
+
+
+                    
+                    <div class="feature-row">
+
+
+                        <button
+                            class="feature-card issue-suggestion"
+                            onclick="setProblem('My WiFi is connected but internet is not working')"
+                        >
+
+                            <span>
+                                📶
+                            </span>
+
+                            <div>
+
+                                <strong>
+                                    WiFi Issue
+                                </strong>
+
+                                <small>
+                                    No internet connection
+                                </small>
+
+                            </div>
+
+                        </button>
+
+
+                        <button
+                            class="feature-card issue-suggestion"
+                            onclick="setProblem('My computer is running very slowly')"
+                        >
+
+                            <span>
+                                💻
+                            </span>
+
+                            <div>
+
+                                <strong>
+                                    Slow Computer
+                                </strong>
+
+                                <small>
+                                    System performance problem
+                                </small>
+
+                            </div>
+
+                        </button>
+
+
+                        <button
+                            class="feature-card issue-suggestion"
+                            onclick="setProblem('My printer is not working')"
+                        >
+
+                            <span>
+                                🖨️
+                            </span>
+
+                            <div>
+
+                                <strong>
+                                    Printer Issue
+                                </strong>
+
+                                <small>
+                                    Printer troubleshooting
+                                </small>
+
+                            </div>
+
+                        </button>
+
+
+                    </div>
+
+                </div>
+
+
+               
+                <div
+                    id="messages"
+                    class="messages"
+                ></div>
+
+
+                
+                <div class="input-wrapper">
+
+
+                    <textarea
+                        id="problemInput"
+                        placeholder="Describe your IT problem..."
+                        rows="1"
+                        onkeydown="handleKeyDown(event)"
+                    ></textarea>
+
+
+                    <button
+                        id="sendButton"
+                        class="send-btn"
+                        onclick="sendProblem()"
+                        title="Send"
+                    >
+                        ➤
+                    </button>
+
+
+                </div>
+
+
+                <p class="input-note">
+                    ITechAssist AI can make mistakes.
+                    Always verify critical IT actions.
+                </p>
+
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,27 @@
+IT HELP DESK KNOWLEDGE BASE
+Category: Login and Access Issues
+
+Problem: User cannot access their account
+
+Possible Causes:
+1. Incorrect username or password
+2. Password has expired
+3. Account is locked
+4. Caps Lock is enabled
+5. Network connection problem
+6. Authentication service temporarily unavailable
+
+Troubleshooting Steps:
+1. Verify that the username is entered correctly.
+2. Re-enter the password carefully and check whether Caps Lock is enabled.
+3. Try the password reset option if available.
+4. Check whether the account has been locked after multiple failed login attempts.
+5. Verify that the computer has an active network connection.
+6. Try signing in again after a few minutes if the authentication service may be temporarily unavailable.
+7. Contact the IT administrator if the account remains locked or access is still unavailable.
+
+Resolution:
+Correcting the username or password, resetting an expired password, or unlocking the account may resolve the login problem.
+
+Escalation:
+If the user cannot access the account after password reset or the account remains locked, escalate the issue to the IT administrator or system administrator.

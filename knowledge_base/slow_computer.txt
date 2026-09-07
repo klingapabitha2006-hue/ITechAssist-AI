@@ -1,0 +1,29 @@
+IT HELP DESK KNOWLEDGE BASE
+Category: System Performance Issues
+
+Problem: Computer is running very slowly
+
+Possible Causes:
+1. Too many applications running at the same time
+2. High CPU or memory usage
+3. Too many startup applications
+4. Low available storage space
+5. Temporary system files
+6. Outdated applications or operating system
+7. Background processes consuming system resources
+
+Troubleshooting Steps:
+1. Close applications that are not currently being used.
+2. Open Task Manager and check CPU, memory, and disk usage.
+3. Disable unnecessary applications from Windows Startup settings.
+4. Check the available storage space on the system drive.
+5. Remove unnecessary temporary files.
+6. Restart the computer to clear temporary processes.
+7. Check for available Windows and application updates.
+8. If one application is consuming unusually high resources, close or restart that application.
+
+Resolution:
+Closing unnecessary applications, freeing storage space, disabling unwanted startup programs, and restarting the computer may improve system performance.
+
+Escalation:
+If the computer remains slow after troubleshooting, the issue may require hardware inspection, system maintenance, or support from the IT administrator.

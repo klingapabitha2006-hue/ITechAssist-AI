@@ -1,0 +1,27 @@
+IT HELP DESK KNOWLEDGE BASE
+Category: WiFi and Internet Issues
+
+Problem: WiFi connected but internet is not working
+
+Possible Causes:
+1. Router or modem temporary failure
+2. DNS configuration problem
+3. Incorrect IP configuration
+4. Network adapter issue
+5. Internet Service Provider outage
+
+Troubleshooting Steps:
+1. Check whether other devices connected to the same WiFi can access the internet.
+2. Restart the WiFi router and wait for 30 seconds before reconnecting.
+3. Disconnect the computer from WiFi and reconnect to the network.
+4. Check whether the computer has received a valid IP address.
+5. Restart the network adapter.
+6. Flush the DNS cache.
+7. Try accessing another website to confirm whether the issue affects all websites.
+8. If other devices also have no internet access, check the router or contact the Internet Service Provider.
+
+Resolution:
+If the issue is caused by a temporary network or DNS problem, restarting the router, reconnecting WiFi, or refreshing network settings may resolve the problem.
+
+Escalation:
+If multiple devices cannot access the internet after restarting the router, escalate the issue to the network administrator or Internet Service Provider.

@@ -1,0 +1,28 @@
+IT HELP DESK KNOWLEDGE BASE
+Category: Printer Issues
+
+Problem: Printer is not working
+
+Possible Causes:
+1. Printer is powered off
+2. Printer is not connected to the computer or network
+3. Printer is offline
+4. Print queue is stuck
+5. Printer driver issue
+6. Paper or ink/toner problem
+
+Troubleshooting Steps:
+1. Check that the printer is powered on and has no error indicators.
+2. Check the USB or network connection between the computer and printer.
+3. Make sure the correct printer is selected as the default printer.
+4. Check whether the printer is showing an offline status.
+5. Open the print queue and cancel any stuck print jobs.
+6. Restart the printer and reconnect it to the computer or network.
+7. Check for available printer driver updates.
+8. Check the printer for paper jams and sufficient ink or toner.
+
+Resolution:
+Restarting the printer, clearing stuck print jobs, checking the connection, and updating the printer driver may resolve the issue.
+
+Escalation:
+If the printer still does not work after troubleshooting, escalate the issue to the IT support team or printer administrator.
