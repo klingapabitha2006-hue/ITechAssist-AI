@@ -2,13 +2,51 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from agents import Agent, function_tool
+import os
+
+from openai import AsyncOpenAI
+
+from agents import (
+    Agent,
+    function_tool,
+    ModelSettings,
+    set_default_openai_client,
+    set_default_openai_api,
+    set_tracing_disabled
+)
 
 from backend.rag import retrieve_relevant_content
 from backend.tools import (
     check_internet_connection,
     check_system_resources
 )
+
+
+# ============================================================
+# GEMINI API CONFIGURATION
+# ============================================================
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    raise RuntimeError(
+        "GEMINI_API_KEY is not configured in the .env file."
+    )
+
+
+gemini_client = AsyncOpenAI(
+    api_key=GEMINI_API_KEY,
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+)
+
+set_default_openai_client(
+    gemini_client,
+    use_for_tracing=False
+)
+
+set_default_openai_api("chat_completions")
+
+set_tracing_disabled(True)
 
 
 # ============================================================
@@ -24,12 +62,9 @@ def search_it_knowledge(problem: str) -> str:
 
     results = retrieve_relevant_content(
         problem,
-        top_k=3
+        top_k=1
     )
 
-    # IMPORTANT:
-    # If no relevant KB article is found, clearly tell the Agent
-    # NOT to use general knowledge for troubleshooting.
     if not results:
         return """
 KNOWLEDGE_BASE_FOUND: NO
@@ -51,12 +86,14 @@ information is not available.
 
     for result in results:
 
+        content = result["content"][:4500]
+
         knowledge.append(
             f"""
 Source: {result['filename']}
 Knowledge Score: {result['score']}
 
-{result['content']}
+{content}
 """
         )
 
@@ -101,6 +138,12 @@ def run_system_diagnostic() -> str:
 helpdesk_agent = Agent(
 
     name="ITechAssist Helpdesk Agent",
+
+    model="gemini-3.5-flash-lite",
+
+    model_settings=ModelSettings(
+        max_tokens=800
+    ),
 
     instructions="""
 
