@@ -1,5 +1,5 @@
-const API_URL = "http://127.0.0.1:8000/api/help";
-const TICKET_API_URL = "http://127.0.0.1:8000/api/tickets"; 
+const API_URL = "https://itechassist-ai.onrender.com/api/help";
+const TICKET_API_URL = "https://itechassist-ai.onrender.com/api/tickets";
  
 const input = document.getElementById("problemInput"); 
 const sendButton = document.getElementById("sendButton"); 
